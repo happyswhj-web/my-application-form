@@ -57,6 +57,14 @@
             background-color: #f44336;
             color: white;
         }
+
+        /* 출근 시간 표시 스타일 */
+        #displayClockIn {
+            font-size: 1.2em;
+            color: #2c3e50;
+            font-weight: bold;
+            padding-right: 10px;
+        }
     </style>
 </head>
 <body>
@@ -65,18 +73,18 @@
         <div class="form-container">
             <select id="name" onchange="updateButtonState()" required>
                 <option value="" disabled selected>이름 선택</option>
-                <option value="오철수">오철수</option>
-                <option value="위휘주">위휘주</option>
-                <option value="차은명">차은명</option>
-                <option value="엄은희">엄은희</option>
+                <option value="홍길동">홍길동</option>
+                <option value="김철수">김철수</option>
                 <option value="이영희">이영희</option>
             </select>
             <input type="date" id="date">
             
+            <span id="displayClockIn"></span>
+            
             <button id="toggleButton" onclick="toggleAttendance()" disabled>출근하기</button>
 
             <input type="text" id="notes" placeholder="비고">
-            </div>
+        </div>
         <table id="attendanceTable">
             <thead>
                 <tr>
@@ -95,9 +103,8 @@
     <div id="messageBox" class="message-box"></div>
 
     <script>
-        // 직원별 출근 시간을 저장하는 객체
         const attendanceData = {};
-        const scriptURL = 'https://script.google.com/macros/s/AKfycbyUXxV3u9cTQEeqbwYrA8pah3NAGCLo9Wj-choePUzgJoglD51LDTgWz6NG4qbpz3rOiw/exec';
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbz13nCtEMzMFYMqdd3cPZaFfMngWpX4Ez2tjUm12rb8DBKDEqfgmSU5l9-EV51oJMIsSw/exec';
 
         function showMessage(message, type) {
             const messageBox = document.getElementById('messageBox');
@@ -115,28 +122,30 @@
             document.getElementById('date').value = dateString;
         };
 
-        // 이름 선택 시 버튼 상태를 업데이트하는 함수
         function updateButtonState() {
             const name = document.getElementById('name').value;
             const toggleButton = document.getElementById('toggleButton');
+            const displayClockIn = document.getElementById('displayClockIn');
 
             if (name.trim() === '') {
                 toggleButton.textContent = '출근하기';
                 toggleButton.disabled = true;
                 toggleButton.classList.remove('clock-out');
+                displayClockIn.textContent = ''; // 이름이 선택되지 않으면 출근 시간 표시 제거
             } else {
                 toggleButton.disabled = false;
                 if (attendanceData[name]) {
                     toggleButton.textContent = '퇴근하기';
                     toggleButton.classList.add('clock-out');
+                    displayClockIn.textContent = `출근: ${attendanceData[name]}`; // 출근 시간 표시
                 } else {
                     toggleButton.textContent = '출근하기';
                     toggleButton.classList.remove('clock-out');
+                    displayClockIn.textContent = ''; // 출근 시간이 없으면 표시 제거
                 }
             }
         }
 
-        // 출근/퇴근 상태를 토글하고 데이터를 저장하는 함수
         async function toggleAttendance() {
             const name = document.getElementById('name').value;
             const date = document.getElementById('date').value;
@@ -153,14 +162,11 @@
             const minutes = String(now.getMinutes()).padStart(2, '0');
             const currentTime = `${hours}:${minutes}`;
 
-            // 출근 상태인 경우 (출근 기록)
             if (!attendanceData[name]) {
                 attendanceData[name] = currentTime;
-                toggleButton.textContent = '퇴근하기';
-                toggleButton.classList.add('clock-out');
                 showMessage(`${name}님, 출근 시간이 기록되었습니다: ${currentTime}`, 'success');
+                updateButtonState();
             } else {
-                // 퇴근 상태인 경우 (데이터 전송)
                 const clockIn = attendanceData[name];
                 const clockOut = currentTime;
                 
@@ -174,7 +180,6 @@
                     const result = await response.text();
 
                     if (result === 'Success') {
-                        // 성공적으로 전송되면 화면의 테이블에도 행 추가
                         const tableBody = document.getElementById('attendanceBody');
                         const newRow = tableBody.insertRow();
                         newRow.insertCell(0).innerHTML = name;
@@ -185,7 +190,6 @@
                         
                         showMessage('데이터가 구글 시트에 성공적으로 저장되었습니다.', 'success');
                         
-                        // 해당 직원의 상태 초기화
                         delete attendanceData[name];
                     } else {
                         showMessage('저장에 실패했습니다. 다시 시도해주세요.', 'error');
@@ -196,7 +200,7 @@
                     showMessage('저장에 실패했습니다. 다시 시도해주세요.', 'error');
                 } finally {
                     toggleButton.disabled = false;
-                    updateButtonState(); // 버튼 상태 다시 업데이트
+                    updateButtonState();
                     document.getElementById('notes').value = '';
                     document.getElementById('name').focus();
                 }
@@ -204,5 +208,4 @@
         }
     </script>
 </body>
-
 </html>
